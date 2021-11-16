@@ -1,0 +1,13 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "99hs:lib"
+
+    - path: "./app/Main.hs"
+      component: "99hs:exe:99hs-exe"
+
+    - path: "./app/Paths_99hs.hs"
+      component: "99hs:exe:99hs-exe"
+
+    - path: "./test"
+      component: "99hs:test:99hs-test"
