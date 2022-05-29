@@ -116,4 +116,13 @@ goldbach n
 -- Given a range of integers m and n, print the goldbach decompositions
 -- for each even integer between m and n given from Problem 40.
 goldbachList :: Int -> Int -> IO ()
-goldbachList = error "Not Implemented"
+goldbachList m n
+    | m > n = goldbachList n m
+    | otherwise = 
+        let string_list = concatMap showPair num_list
+        in putStrLn string_list
+        where
+            showPair :: (Int,Int) -> String
+            showPair (x,y) = 
+                show (x+y) ++ " = " ++ show x ++ " + " ++ show y ++ "\n"
+            num_list = [goldbach t | t <- [m..n], even t]
