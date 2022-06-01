@@ -78,8 +78,7 @@ dictSort (x1,y1) (x2,y2)
 print2D :: (Show a) => [(a, (Integer, Integer))] -> State (Integer, Integer) String
 print2D ps' =
     let sorted_ps = sortBy sndDictSort ps'
-    in do
-        (cx, cy) <- get
+    in get >>= (\ (cx, cy) ->
         case sorted_ps of
             [] -> return ""
             ( (t, (x,y)) : ps ) -> do
@@ -90,7 +89,7 @@ print2D ps' =
                 return $ genericReplicate (2*dy) '\n'
                         <> genericReplicate dx ' '
                         <> show t
-                        <> rest
+                        <> rest )
     where
         sndDictSort p1 p2 = dictSort (snd p1) (snd p2)
 
