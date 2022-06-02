@@ -75,20 +75,29 @@ dictSort (x1,y1) (x2,y2)
     | y1 == y2 = compare x1 x2
     | otherwise = compare y1 y2
 
-print2D :: (Show a) => [(a, (Integer, Integer))] -> State (Integer, Integer) String
+newtype PrintContext = PrintContext { 
+        cursor :: (Integer,Integer) }
+
+print2D :: (Show a) => [(a, (Integer, Integer))] -> State PrintContext String
 print2D ps' =
     let sorted_ps = sortBy sndDictSort ps'
-    in get >>= (\ (cx, cy) ->
+    in get >>= (\ ctx ->
         case sorted_ps of
             [] -> return ""
             ( (t, (x,y)) : ps ) -> do
-                let dy = y - cy
-                let dx = if dy == 0 then x - cx else x
-                put (x,y)
+                let 
+                    (cx,cy) = cursor ctx
+                    dy = y - cy
+                    dx = if dy == 0 then x - cx else x
+                    s = show t
+                    l = genericLength s
+                    lshift = floor ( l / 2 )
+                    rshift = ceiling ( l / 2 )
+                put $ PrintContext (x + rshift, y) 
                 rest <- print2D ps
                 return $ genericReplicate (2*dy) '\n'
-                        <> genericReplicate dx ' '
-                        <> show t
+                        <> genericReplicate (dx - lshift) ' '
+                        <> s
                         <> rest )
     where
         sndDictSort p1 p2 = dictSort (snd p1) (snd p2)
@@ -96,7 +105,8 @@ print2D ps' =
 instance Show a => Show (Tree a) where
     show t = 
         let h = depth t
-        in flip evalState (0,0) . print2D. map (second $ map2D h) . serialize $ t
+        in flip evalState (PrintContext (0,0)) . print2D . 
+            map (second $ map2D h) . serialize $ t
 
 {- END TREE RENDERING CODE -}
 
@@ -110,14 +120,16 @@ instance Show a => Show (Tree a) where
 -- subtree of a completely-balanced tree is completely balanced.
 
 cbalTree :: Integer -> [Tree Char]
-cbalTree 0 = [Empty]
-cbalTree 1 = [Branch 'x' Empty Empty]
 cbalTree n
-    | n < 0 = []
+    | n < 0     = []
+    | n == 0    = [Empty]
+    | n == 1    = [leaf 'x']
     | otherwise =
-        let (bs1,bs2) = (cbalTree k1, cbalTree k2)
-        in [ Branch 'x' b1 b2 | b1 <- bs1, b2 <- bs2 ]
-            ++ [ Branch 'x' b2 b1 | b1 <- bs1, b2 <- bs2 ]
+        let (bs1,bs2) = (cbalTree k1, cbalTree k2) 
+        in if k1 == k2
+            then [ Branch 'x' b1 b2 | b1 <- bs1, b2 <- bs2 ]
+            else [ Branch 'x' b1 b2 | b1 <- bs1, b2 <- bs2 ]
+                ++ [ Branch 'x' b2 b1 | b1 <- bs1, b2 <- bs2 ]
             where
                 m  = (toRational n - 1) / 2
                 k1 = ceiling m
