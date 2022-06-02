@@ -9,8 +9,45 @@ import Control.Monad.State (
     )
 
 import Data.Bifunctor (second)
+import qualified System.Random.Stateful as Integer
 
 tests n
+    | n == 55   =
+        let answer_trees = [
+                    Branch 'x' (Branch 'x' Empty Empty)
+                        (Branch 'x' Empty
+                            (Branch 'x' Empty Empty))
+                ,   Branch 'x' (Branch 'x' Empty Empty)
+                        (Branch 'x' (Branch 'x' Empty Empty)
+                            Empty)
+                ,   Branch 'x' (Branch 'x' Empty
+                            (Branch 'x' Empty Empty))
+                        (Branch 'x' Empty Empty)
+                ,   Branch 'x' (Branch 'x' (Branch 'x' Empty Empty)
+                                Empty)
+                                (Branch 'x' Empty Empty) ]
+            test_trees = cbalTree 4
+        in all (`elem` answer_trees) test_trees
+    | n == 56   =
+        symmetric (Branch 'x' (Branch 'x' Empty Empty) Empty)
+        && symmetric (Branch 'x' (Branch 'x' Empty Empty)
+                        (Branch 'x' Empty Empty))
+    | n == 57   =
+        let
+            p1  = symmetric . construct $ [5, 3, 18, 1, 4, 12, 21]
+            t   = construct [3, 2, 5, 7, 1]
+            p2  = symmetric t
+            ans = Branch 3 (Branch 2 (Branch 1 Empty Empty) Empty)
+                    (Branch 5 Empty (Branch 7 Empty Empty))
+        in p1 && p2 && t == ans
+    | n == 58   =
+        let answer_trees = [
+                    Branch 'x' (Branch 'x' Empty (Branch 'x' Empty Empty))
+                        (Branch 'x' (Branch 'x' Empty Empty) Empty)
+                ,   Branch 'x' (Branch 'x' (Branch 'x' Empty Empty) Empty)
+                        (Branch 'x' Empty (Branch 'x' Empty Empty)) ]
+            test_trees = genericSymCbalTrees 'x' 5
+        in all (`elem` answer_trees) test_trees 
     | n <= 60   = True
     | otherwise = False
 
@@ -75,7 +112,7 @@ dictSort (x1,y1) (x2,y2)
     | y1 == y2 = compare x1 x2
     | otherwise = compare y1 y2
 
-newtype PrintContext = PrintContext { 
+newtype PrintContext = PrintContext {
         cursor :: (Integer,Integer) }
 
 print2D :: (Show a) => [(a, (Integer, Integer))] -> State PrintContext String
@@ -85,7 +122,7 @@ print2D ps' =
         case sorted_ps of
             [] -> return ""
             ( (t, (x,y)) : ps ) -> do
-                let 
+                let
                     (cx,cy) = cursor ctx
                     dy = y - cy
                     dx = if dy == 0 then x - cx else x
@@ -93,7 +130,7 @@ print2D ps' =
                     l = genericLength s
                     lshift = floor ( l / 2 )
                     rshift = ceiling ( l / 2 )
-                put $ PrintContext (x + rshift, y) 
+                put $ PrintContext (x + rshift, y)
                 rest <- print2D ps
                 return $ genericReplicate (2*dy) '\n'
                         <> genericReplicate (dx - lshift) ' '
@@ -103,9 +140,9 @@ print2D ps' =
         sndDictSort p1 p2 = dictSort (snd p1) (snd p2)
 
 instance Show a => Show (Tree a) where
-    show t = 
+    show t =
         let h = depth t
-        in flip evalState (PrintContext (0,0)) . print2D . 
+        in flip evalState (PrintContext (0,0)) . print2D .
             map (second $ map2D h) . serialize $ t
 
 {- END TREE RENDERING CODE -}
@@ -125,7 +162,7 @@ cbalTree n
     | n == 0    = [Empty]
     | n == 1    = [leaf 'x']
     | otherwise =
-        let (bs1,bs2) = (cbalTree k1, cbalTree k2) 
+        let (bs1,bs2) = (cbalTree k1, cbalTree k2)
         in if k1 == k2
             then [ Branch 'x' b1 b2 | b1 <- bs1, b2 <- bs2 ]
             else [ Branch 'x' b1 b2 | b1 <- bs1, b2 <- bs2 ]
@@ -134,3 +171,59 @@ cbalTree n
                 m  = (toRational n - 1) / 2
                 k1 = ceiling m
                 k2 = floor m
+
+-- Problem 56
+-- A tree is symmetric if the topology of the left subtree and right subtree are
+-- mirror opposites. Write a function which determines whether a tree is
+-- symmetric.
+symmetric :: Tree a -> Bool
+symmetric Empty = True
+symmetric (Branch x t1 t2) = t1 `sameTopology` mirror t2
+    where
+        mirror Empty = Empty
+        mirror (Branch x' t1' t2') =
+            Branch x' (mirror t2') (mirror t1')
+
+        sameTopology Empty Empty = True
+        sameTopology Empty t1    = False
+        sameTopology (Branch _ s1 s2) (Branch _ u1 u2) =
+            sameTopology s1 u1 && sameTopology s2 u2
+        sameTopology t2 t1 = sameTopology t1 t2
+
+-- Problem 57
+-- Write a function to construct a binary search tree from a list of numbers.
+(|>) :: Integer -> Tree Integer -> Tree Integer
+n |> Empty = leaf n
+n |> (Branch x t1 t2) =
+    if n < x
+        then Branch x (n |> t1) t2
+        else Branch x t1 (n |> t2)
+
+-- The answer key makes the obvious generalization to Ord a instead of Integer.
+-- Note that the behavior when n == x is not well-defined by the problem
+-- specification.
+
+construct :: [Integer] -> Tree Integer
+construct = foldl (flip (|>)) Empty
+
+-- Problem 58
+-- Apply the generate-and-test paradigm to construct all symmetric, completely
+-- balanced binary trees with a given number of nodes.
+genericSymCbalTrees :: a -> Integer -> [Tree a]
+genericSymCbalTrees _ 0 = [Empty]
+genericSymCbalTrees x n = filter (\ t -> balanced t && symmetric t) $ trees x n
+    where
+        trees :: a -> Integer -> [Tree a]
+        trees _ 0 = [Empty]
+        trees x n = concat [
+            [Branch x t1 t2 |
+                t1 <- trees x k,
+                t2 <- trees x (n - 1 - k) ] |
+            k <- [0..(n - 1)] ]
+        balanced :: Tree a -> Bool
+        balanced Empty = True
+        balanced (Branch _ t1 t2) =
+            let
+                l1 = foldr (\ x b -> 1 + b) 0 t1
+                l2 = foldr (\ x b -> 1 + b) 0 t2
+            in (l1 - l2) <= 1
