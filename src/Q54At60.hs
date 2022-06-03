@@ -47,7 +47,7 @@ tests n
                 ,   Branch 'x' (Branch 'x' (Branch 'x' Empty Empty) Empty)
                         (Branch 'x' Empty (Branch 'x' Empty Empty)) ]
             test_trees = genericSymCbalTrees 'x' 5
-        in all (`elem` answer_trees) test_trees 
+        in all (`elem` answer_trees) test_trees
     | n <= 60   = True
     | otherwise = False
 
@@ -227,3 +227,24 @@ genericSymCbalTrees x n = filter (\ t -> balanced t && symmetric t) $ trees x n
                 l1 = foldr (\ x b -> 1 + b) 0 t1
                 l2 = foldr (\ x b -> 1 + b) 0 t2
             in (l1 - l2) <= 1
+
+-- Problem 59
+-- Given a depth h, construct all trees of depth h which are height-balanced.  A
+-- tree is height-balanced if at every node, the height of its subtrees are
+-- almost equal (their difference is at most one).
+noDuplicates :: [a] -> [(a,a)]
+noDuplicates [] = []
+noDuplicates (x:xs) = (x,x) : (xs >>= (\ x' -> [(x,x'), (x',x)])) ++ noDuplicates xs
+
+hbalTree :: a -> Integer -> [Tree a]
+hbalTree x h
+    | h < 0     = []
+    | h == 0    = [Empty]
+    | h == 1    = [leaf x]
+    | otherwise =
+        let (ts1,ts2) = (hbalTree x (h-1), hbalTree x (h-2))
+        in concat
+            [ [Branch x t1 t2, Branch x t2 t1]  |
+                t1 <- ts1
+            ,   t2 <- ts2 ]
+            ++ [ Branch x t1 t1' | (t1,t1') <- noDuplicates ts1]
