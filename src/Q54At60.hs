@@ -248,3 +248,53 @@ hbalTree x h
                 t1 <- ts1
             ,   t2 <- ts2 ]
             ++ [ Branch x t1 t1' | (t1,t1') <- noDuplicates ts1]
+
+-- Problem 60
+-- Find a recursive statement and write a function which calculates the minimum
+-- number of nodes of a height-balanced tree of height h.
+
+-- Clearly minNodes h1 < minNodes h2 whenever h1 < h2. And any subtree of a
+-- minimal tree is minimal, otherwise we could replace it with a smaller tree.
+-- Therefore: 
+minNodes :: Integer -> Integer
+minNodes 0 = 0
+minNodes 1 = 1
+minNodes h = 1 + minNodes (h-1) + minNodes (h-2) -- add 1 for the root
+
+maxNodes :: Integer -> Integer
+maxNodes h = (2^h) - 1
+
+minHeight :: Integer -> Integer
+minHeight 0 = 0
+minHeight 1 = 1
+minHeight n
+    | odd n = 
+        let k = (n-1) `div` 2
+        in 1 + minHeight k
+    | otherwise = minHeight (n+1) 
+    -- if the two subtrees aren't exactly equal, we can make them equal by
+    -- adding a node, which will leave the height of the parent tree unchanged.
+
+-- Write a function which outputs the maximum height of a height-balanced tree
+-- with n nodes.
+
+-- Similar to before, maxHeight n1 <= maxHeight n2 if n1 <= n2.
+maxHeight :: Integer -> Integer
+maxHeight 0 = 0
+maxHeight 1 = 1
+maxHeight n =
+        let k = ceiling (fromIntegral (n - 1) / 2)
+        in 1 + maxHeight k
+
+-- Construct all height-balanced trees with n nodes.
+hbalTreeNodes :: a -> Integer -> [Tree a]
+hbalTreeNodes x n =
+    let
+        hmax = maxHeight n
+        hmin = minHeight n
+        ts = concat [hbalTree x h | h <- [hmin..hmax]]
+    in filter (\ x -> nodes x == n) ts
+    where
+        nodes t = foldr (\ x n -> n + 1) 0 t
+
+-- How many height-balanced trees with 15 nodes are there
